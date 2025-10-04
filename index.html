@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Federal.LOL — Coding AI</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Helvetica,Arial;margin:0;padding:0;background:#0f172a;color:#e2e8f0;display:flex;flex-direction:column;align-items:center;min-height:100vh}
+    main{max-width:800px;width:100%;padding:20px}
+    h1{text-align:center;margin-bottom:10px}
+    textarea,input,button{width:100%;border:none;border-radius:8px;padding:10px;margin:6px 0;font-size:1rem}
+    textarea{resize:vertical;min-height:100px}
+    button{background:#3b82f6;color:white;cursor:pointer;font-weight:600}
+    button:hover{background:#2563eb}
+    pre{background:#1e293b;padding:12px;border-radius:8px;white-space:pre-wrap;word-wrap:break-word;min-height:120px}
+    footer{margin-top:auto;text-align:center;font-size:.8rem;opacity:.6;padding:10px}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Federal.LOL — Local AI Test</h1>
+
+    <label>Model</label>
+    <input id="model" value="google/flan-t5-small" />
+
+    <label>Your Hugging Face Token</label>
+    <input id="token" type="password" placeholder="hf_xxx" value="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" />
+
+    <label>Prompt</label>
+    <textarea id="prompt" placeholder="Ask me to write or debug some code..."></textarea>
+
+    <button id="run">Run</button>
+
+    <h3>Response</h3>
+    <pre id="output">No output yet.</pre>
+  </main>
+
+  <footer>Private local use only — do not publish this with your token.</footer>
+
+  <script>
+    async function runPrompt() {
+      const token = document.getElementById("token").value.trim();
+      const model = document.getElementById("model").value.trim();
+      const prompt = document.getElementById("prompt").value.trim();
+      const output = document.getElementById("output");
+
+      if (!prompt) {
+        output.textContent = "Enter a prompt first.";
+        return;
+      }
+
+      output.textContent = "Thinking...";
+      try {
+        const resp = await fetch(`https://api-inference.huggingface.co/models/${encodeURIComponent(model)}`, {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputs: prompt,
+            options: { wait_for_model: true }
+          }),
+        });
+
+        if (!resp.ok) {
+          const txt = await resp.text();
+          throw new Error("HTTP " + resp.status + ": " + txt);
+        }
+
+        const data = await resp.json();
+        let textOut = "";
+        if (Array.isArray(data) && data[0]?.generated_text) textOut = data[0].generated_text;
+        else if (data.generated_text) textOut = data.generated_text;
+        else textOut = JSON.stringify(data, null, 2);
+
+        output.textContent = textOut;
+      } catch (e) {
+        output.textContent = "Error: " + e.message;
+      }
+    }
+
+    document.getElementById("run").addEventListener("click", runPrompt);
+  </script>
+</body>
+</html>
